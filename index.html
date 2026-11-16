@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function() {
+        try {
+          var originalFetch = window.fetch;
+          if (typeof originalFetch === 'function') {
+            originalFetch = originalFetch.bind(window);
+          }
+          var currentFetch = originalFetch;
+
+          // Define on window with both getter and setter so external polyfills/scripts can assign window.fetch without throwing
+          Object.defineProperty(window, 'fetch', {
+            get: function() {
+              return currentFetch;
+            },
+            set: function(fn) {
+              currentFetch = fn;
+            },
+            configurable: true,
+            enumerable: true
+          });
+
+          // Also define on Window.prototype if accessible
+          if (typeof Window !== 'undefined' && Window.prototype) {
+            Object.defineProperty(Window.prototype, 'fetch', {
+              get: function() {
+                return currentFetch;
+              },
+              set: function(fn) {
+                currentFetch = fn;
+              },
+              configurable: true,
+              enumerable: true
+            });
+          }
+        } catch (e) {
+          // Graceful fallback
+        }
+      })();
+    </script>
+    <title>WaveHaven Surf House & Hostel</title>
+    <meta name="description" content="Multi-step surf house hostel booking engine with WhatsApp auto-responders triggered by booking status changes (confirmed, cancelled, checked-in), multi-language support (English, Spanish, Arabic) across UI & WhatsApp, separated admin management panel with staff authentication gate, active admin profile menu with 1-click logout, waitlist auto-flagging with 1-click booking conversion, live ocean weather & wave forecast by sport with global search, QR code camera scanner for instant booking lookup, brand theme customizer, monthly occupancy percentage chart, and comprehensive operations dashboard." />
+    <meta property="og:title" content="WaveHaven Surf House & Hostel" />
+    <meta property="og:description" content="Multi-step surf house hostel booking engine with WhatsApp auto-responders triggered by booking status changes (confirmed, cancelled, checked-in), multi-language support (English, Spanish, Arabic) across UI & WhatsApp, separated admin management panel with staff authentication gate, active admin profile menu with 1-click logout, waitlist auto-flagging with 1-click booking conversion, live ocean weather & wave forecast by sport with global search, QR code camera scanner for instant booking lookup, brand theme customizer, monthly occupancy percentage chart, and comprehensive operations dashboard." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

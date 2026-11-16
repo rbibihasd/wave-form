@@ -1,0 +1,6 @@
+{
+  "name": "WaveHaven Surf House & Hostel",
+  "description": "Multi-step surf house hostel booking engine with WhatsApp auto-responders triggered by booking status changes (confirmed, cancelled, checked-in), multi-language support (English, Spanish, Arabic) across UI & WhatsApp, separated admin management panel with staff authentication gate, active admin profile menu with 1-click logout, waitlist auto-flagging with 1-click booking conversion, live ocean weather & wave forecast by sport with global search, QR code camera scanner for instant booking lookup, brand theme customizer, monthly occupancy percentage chart, and comprehensive operations dashboard.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

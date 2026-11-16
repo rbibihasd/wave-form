@@ -1,0 +1,254 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   DYNAMIC THEME CUSTOMIZER STYLESHEET
+   Controls corner radii, border widths, and shadow intensities across all UI elements
+   ========================================================================== */
+:root {
+  --brand-primary: #0d9488;
+  
+  /* Fallback Base Radii */
+  --theme-radius-3xl: 24px;
+  --theme-radius-2xl: 16px;
+  --theme-radius-xl: 12px;
+  --theme-radius-lg: 8px;
+  --theme-radius-md: 6px;
+  --theme-radius-sm: 4px;
+
+  /* Fallback Borders */
+  --theme-border-width: 1px;
+  --theme-border-width-2: 2px;
+
+  /* Fallback Shadows */
+  --theme-shadow-2xs: 0 1px 2px 0 rgb(15 23 42 / 0.05);
+  --theme-shadow-xs: 0 1px 3px 0 rgb(15 23 42 / 0.07), 0 1px 2px -1px rgb(15 23 42 / 0.07);
+  --theme-shadow-sm: 0 2px 5px -1px rgb(15 23 42 / 0.08), 0 1px 3px -1px rgb(15 23 42 / 0.08);
+  --theme-shadow-md: 0 6px 12px -2px rgb(15 23 42 / 0.1), 0 3px 6px -3px rgb(15 23 42 / 0.08);
+  --theme-shadow-lg: 0 12px 20px -4px rgb(15 23 42 / 0.12), 0 4px 8px -4px rgb(15 23 42 / 0.08);
+  --theme-shadow-xl: 0 24px 36px -8px rgb(15 23 42 / 0.14), 0 8px 16px -6px rgb(15 23 42 / 0.1);
+}
+
+/* Dynamic Corner Radii across all UI elements (excluding .rounded-full circular tags/avatars) */
+.rounded-3xl:not(.rounded-full) {
+  border-radius: var(--theme-radius-3xl) !important;
+}
+.rounded-2xl:not(.rounded-full) {
+  border-radius: var(--theme-radius-2xl) !important;
+}
+.rounded-xl:not(.rounded-full) {
+  border-radius: var(--theme-radius-xl) !important;
+}
+.rounded-lg:not(.rounded-full) {
+  border-radius: var(--theme-radius-lg) !important;
+}
+.rounded-md:not(.rounded-full) {
+  border-radius: var(--theme-radius-md) !important;
+}
+.rounded-sm:not(.rounded-full) {
+  border-radius: var(--theme-radius-sm) !important;
+}
+
+/* Specific Sharp Mode edge handling */
+:root[data-theme-radius="sharp"] .rounded-3xl,
+:root[data-theme-radius="sharp"] .rounded-2xl,
+:root[data-theme-radius="sharp"] .rounded-xl,
+:root[data-theme-radius="sharp"] .rounded-lg,
+:root[data-theme-radius="sharp"] .rounded-md,
+:root[data-theme-radius="sharp"] .rounded-sm {
+  border-radius: 0px !important;
+}
+
+/* Dynamic Border Widths */
+.border:not([class*="border-t-"]):not([class*="border-b-"]):not([class*="border-l-"]):not([class*="border-r-"]) {
+  border-width: var(--theme-border-width) !important;
+}
+.border-2:not([class*="border-t-"]):not([class*="border-b-"]):not([class*="border-l-"]):not([class*="border-r-"]) {
+  border-width: var(--theme-border-width-2) !important;
+}
+
+/* Border Width specific state helpers */
+:root[data-theme-border="none"] .border:not([class*="border-t-"]):not([class*="border-b-"]):not([class*="border-l-"]):not([class*="border-r-"]) {
+  border-width: 0px !important;
+}
+:root[data-theme-border="thin"] .border:not([class*="border-t-"]):not([class*="border-b-"]):not([class*="border-l-"]):not([class*="border-r-"]) {
+  border-width: 1px !important;
+}
+:root[data-theme-border="medium"] .border:not([class*="border-t-"]):not([class*="border-b-"]):not([class*="border-l-"]):not([class*="border-r-"]) {
+  border-width: 2px !important;
+}
+:root[data-theme-border="bold"] .border:not([class*="border-t-"]):not([class*="border-b-"]):not([class*="border-l-"]):not([class*="border-r-"]) {
+  border-width: 3px !important;
+}
+
+/* Dynamic Shadow Intensities */
+.shadow-2xs {
+  box-shadow: var(--theme-shadow-2xs) !important;
+}
+.shadow-xs {
+  box-shadow: var(--theme-shadow-xs) !important;
+}
+.shadow-sm, .shadow {
+  box-shadow: var(--theme-shadow-sm) !important;
+}
+.shadow-md {
+  box-shadow: var(--theme-shadow-md) !important;
+}
+.shadow-lg {
+  box-shadow: var(--theme-shadow-lg) !important;
+}
+.shadow-xl {
+  box-shadow: var(--theme-shadow-xl) !important;
+}
+
+/* Shadow specific none state helper */
+:root[data-theme-shadow="none"] .shadow-2xs,
+:root[data-theme-shadow="none"] .shadow-xs,
+:root[data-theme-shadow="none"] .shadow-sm,
+:root[data-theme-shadow="none"] .shadow,
+:root[data-theme-shadow="none"] .shadow-md,
+:root[data-theme-shadow="none"] .shadow-lg,
+:root[data-theme-shadow="none"] .shadow-xl {
+  box-shadow: none !important;
+}
+
+/* ==========================================================================
+   PRINT STYLESHEET & INVOICE VOUCHER FORMATTING
+   Automatically switches to A4 portrait layout, hides all UI elements except 
+   the booking invoice modal content, and adds a decorative 'WaveHaven Certified' watermark.
+   ========================================================================== */
+@page {
+  size: A4 portrait;
+  margin: 10mm 12mm;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm;
+  }
+
+  /* Force exact color reproduction for badges, headers, and watermark */
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html, body {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    overflow: visible !important;
+  }
+
+  /* 1. HIDE ALL APPLICATION UI ELEMENTS EXCEPT INVOICE CONTENT */
+  .no-print,
+  header,
+  footer,
+  nav,
+  aside,
+  button:not(#printable-booking-invoice button),
+  [role="dialog"]:not(:has(#printable-booking-invoice)),
+  .fixed.inset-0:not(:has(#printable-booking-invoice)) {
+    display: none !important;
+  }
+
+  /* When the printable booking invoice is active, suppress all non-invoice root elements */
+  body:has(#printable-booking-invoice) > *:not(:has(#printable-booking-invoice)),
+  #root > *:not(:has(#printable-booking-invoice)) {
+    display: none !important;
+  }
+
+  /* Reset outer fixed modal wrappers for seamless document printing */
+  .fixed.inset-0:has(#printable-booking-invoice),
+  .fixed.inset-0 {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Reset intermediate modal dialog cards and scroll containers */
+  .fixed.inset-0:has(#printable-booking-invoice) > div,
+  .fixed.inset-0:has(#printable-booking-invoice) .overflow-y-auto {
+    position: static !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* 2. TARGET SPECIFICALLY THE PRINTABLE BOOKING INVOICE CONTENT SHEET */
+  #printable-booking-invoice {
+    position: relative !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    overflow: hidden !important;
+    page-break-inside: auto;
+  }
+
+  /* Ensure text, tables, and QR codes stack properly above the watermark */
+  #printable-booking-invoice > * {
+    position: relative !important;
+    z-index: 1 !important;
+  }
+
+  /* Avoid awkward page cuts in table rows and detail cards */
+  tr, .grid, .flex {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* 3. DECORATIVE 'WAVEHAVEN CERTIFIED' WATERMARK */
+  #printable-booking-invoice::before {
+    content: "WaveHaven Certified";
+    position: absolute !important;
+    top: 48% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) rotate(-30deg) !important;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    font-size: 46pt !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.14em !important;
+    text-transform: uppercase !important;
+    color: #0d9488 !important;
+    border: 4pt double #0d9488 !important;
+    border-radius: 24px !important;
+    padding: 18px 46px !important;
+    opacity: 0.085 !important;
+    pointer-events: none !important;
+    z-index: 0 !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+    box-shadow: inset 0 0 0 3pt rgba(13, 148, 136, 0.06) !important;
+    user-select: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
