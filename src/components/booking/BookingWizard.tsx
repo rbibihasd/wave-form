@@ -10,20 +10,15 @@ import { StepGuestDetails } from './StepGuestDetails';
 import { StepConfirmation } from './StepConfirmation';
 import { StepDynamicCustom } from './StepDynamicCustom';
 import { dispatchWebhook } from '../../utils/webhook';
-import { LiveWeatherTicker } from '../weather/LiveWeatherTicker';
-import { INITIAL_OCEAN_SPOTS } from '../../data/oceanSpotsData';
-import { LiveOceanSpot } from '../../types/weather';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface BookingWizardProps {
   rooms: Room[];
   addOns: SurfAddOn[];
   bookings: Booking[];
   settings: HostelSettings;
-  selectedOceanSpot?: LiveOceanSpot;
-  onSelectOceanSpot?: (spot: LiveOceanSpot) => void;
   onSaveBooking: (newBooking: Booking) => void;
   onGoToAdmin: () => void;
-  onOpenWeatherView?: () => void;
   onOpenScanner?: () => void;
 }
 
@@ -32,13 +27,11 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
   addOns,
   bookings,
   settings,
-  selectedOceanSpot,
-  onSelectOceanSpot,
   onSaveBooking,
   onGoToAdmin,
-  onOpenWeatherView,
   onOpenScanner,
 }) => {
+  const { t } = useLanguage();
   const today = getTodayString();
   const defaultCheckOut = addDaysToString(today, 4);
 
@@ -203,24 +196,33 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
   const confirmationConfig = formConfig.steps.find((s) => s.id === 'confirmation') || {
     id: 'confirmation',
     stepNumber: activeInputSteps.length + 1,
-    name: 'Confirmation',
-    title: 'Booking Confirmed!',
-    subtitle: 'Your surf lodge stay is secured.',
+    name: t.steps?.confirm || 'Confirmation',
+    title: t.booking?.confirmationTitle || 'Booking Confirmed!',
+    subtitle: t.booking?.confirmationSubtitle || 'Your surf lodge stay is secured.',
     enabled: true,
+  };
+
+  const getTranslatedStepLabel = (s: BookingStepConfig) => {
+    if (s.id === 'dates') return t.steps?.dates || s.name;
+    if (s.id === 'rooms') return t.steps?.rooms || s.name;
+    if (s.id === 'addons') return t.steps?.addons || s.name;
+    if (s.id === 'guest') return t.steps?.guest || s.name;
+    if (s.id === 'confirmation') return t.steps?.confirm || s.name;
+    return s.name;
   };
 
   const steps = [
     ...activeInputSteps.map((s, idx) => ({
       index: idx,
       id: s.id,
-      label: s.name,
+      label: getTranslatedStepLabel(s),
       icon: getStepIcon(s),
       config: s,
     })),
     {
       index: activeInputSteps.length,
       id: 'confirmation',
-      label: confirmationConfig.name || 'Confirmation',
+      label: t.steps?.confirm || confirmationConfig.name || 'Confirmation',
       icon: CheckCircle2,
       config: confirmationConfig,
     },
@@ -317,15 +319,6 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
         </div>
       )}
 
-      {/* Live Ocean Weather & Wave Conditions Ticker */}
-      {onOpenWeatherView && (
-        <LiveWeatherTicker
-          selectedSpot={selectedOceanSpot}
-          onSelectSpot={onSelectOceanSpot}
-          onOpenWeatherView={onOpenWeatherView}
-        />
-      )}
-
       {/* Promotional Banner from Booking Form Builder */}
       {formConfig.bannerNotice && (
         <div className="mb-6 p-3.5 sm:p-4 rounded-2xl bg-teal-900 text-teal-50 border border-teal-700/60 shadow-xs flex items-center justify-between gap-3 text-xs font-semibold">
@@ -352,7 +345,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
               <span className="p-1.5 rounded-xl bg-teal-50 text-teal-600 border border-teal-100">
                 <Waves className="w-5 h-5" />
               </span>
-              <span>{settings.name || 'Surf Lodge'} Booking</span>
+              <span>{settings.name || 'Surf Lodge'} — {t.nav?.bookStay || 'Booking'}</span>
             </h1>
             {isReturningVisitor && (
               <span 
@@ -365,9 +358,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
             )}
           </div>
           <p className="text-xs sm:text-sm text-slate-500">
-            {isReturningVisitor
-              ? 'Welcome back! Use Quick Book to bypass step 1 and jump straight to available rooms.'
-              : 'Select your stay dates, explore available lodge rooms, and customize your surf adventure.'}
+            {t.booking?.datesSubtitle || 'Select your stay dates, explore available lodge rooms, and customize your surf adventure.'}
           </p>
         </div>
 
@@ -391,7 +382,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
                 Quick Book
               </span>
               <span className="text-[10px] font-medium text-white/85 leading-tight">
-                {isReturningVisitor ? 'Skip to Rooms &rarr;' : 'Returning Visitors &rarr;'}
+                {isReturningVisitor ? 'Skip to Rooms →' : 'Returning Visitors →'}
               </span>
             </div>
             <ArrowRight className="w-4 h-4 ml-1 opacity-80 group-hover:translate-x-1 transition-transform" />
@@ -568,9 +559,6 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({
                 checkOut={checkOut}
                 guestsCount={guestsCount}
                 surfLevel={surfLevel}
-                selectedSpot={selectedOceanSpot}
-                onSelectSpot={onSelectOceanSpot}
-                onOpenWeatherView={onOpenWeatherView}
                 onCheckInChange={setCheckIn}
                 onCheckOutChange={setCheckOut}
                 onGuestsCountChange={setGuestsCount}

@@ -327,7 +327,7 @@ Return ONLY a valid JSON object strictly adhering to this structure:
 }`;
 
       const response = await client.models.generateContent({
-        model: "gemini-3.8-flash",
+        model: "gemini-4-hydrogen",
         contents: `Create a custom multi-step booking form template for: "${prompt}"`,
         config: {
           systemInstruction,
@@ -349,7 +349,7 @@ Return ONLY a valid JSON object strictly adhering to this structure:
       return res.json({
         success: true,
         config: parsedConfig,
-        source: "gemini-3.8-flash",
+        source: "gemini-4-hydrogen",
         message: "Successfully generated custom booking flow with Gemini AI.",
       });
     } catch (err: any) {
@@ -360,6 +360,156 @@ Return ONLY a valid JSON object strictly adhering to this structure:
         config: fallback,
         source: "smart_template_engine_fallback",
         message: "Generated custom multi-step form tailored to your prompt.",
+      });
+    }
+  });
+
+  // AI Automatic Language Translation Endpoint (Supports Gemini, OpenRouter, ChatGPT)
+  app.post("/api/ai/translate-language", async (req, res) => {
+    try {
+      const {
+        targetLangCode,
+        targetLangName,
+        provider = "gemini",
+        model,
+        sourceDictionary,
+      } = req.body;
+
+      if (!targetLangCode || !sourceDictionary || typeof sourceDictionary !== "object") {
+        return res.status(400).json({
+          error: "targetLangCode and sourceDictionary object are required",
+        });
+      }
+
+      const langLabel = targetLangName ? `${targetLangName} (${targetLangCode})` : targetLangCode;
+
+      const systemPrompt = `You are an expert hospitality and surf lodge localization translator.
+Translate all string values in the provided JSON dictionary from English into ${langLabel}.
+CRITICAL RULES:
+1. Keep the EXACT same nested JSON keys and structure. Do NOT rename any JSON keys.
+2. Preserve all template variables inside curly braces exactly as-is, such as {nights}, {count}, {city}, {country}, {time}, {lang}.
+3. Keep emojis natural and intact where present.
+4. Set top-level "languageName" to the native name of ${langLabel}.
+5. Return ONLY valid, parseable JSON without markdown code fences.`;
+
+      const userPrompt = JSON.stringify(sourceDictionary);
+
+      let translatedJsonText = "";
+      let activeProviderUsed = provider;
+      let activeModelUsed = model || "gemini-4-hydrogen";
+
+      // 1. Try OpenRouter if requested and OPENROUTER_API_KEY is configured
+      if (provider === "openrouter" && process.env.OPENROUTER_API_KEY) {
+        const orModel = model || "openai/gpt-4o-mini";
+        const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": process.env.APP_URL || "http://localhost:3000",
+            "X-Title": "WaveHaven AI Translator",
+          },
+          body: JSON.stringify({
+            model: orModel,
+            response_format: { type: "json_object" },
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+          }),
+        });
+
+        if (orRes.ok) {
+          const orData: any = await orRes.json();
+          translatedJsonText = orData.choices?.[0]?.message?.content || "";
+          activeProviderUsed = "openrouter";
+          activeModelUsed = orModel;
+        }
+      }
+
+      // 2. Try ChatGPT / OpenAI if requested and OPENAI_API_KEY is configured
+      if (!translatedJsonText && provider === "chatgpt" && process.env.OPENAI_API_KEY) {
+        const oaModel = model || "gpt-4o-mini";
+        const oaRes = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: oaModel,
+            response_format: { type: "json_object" },
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+          }),
+        });
+
+        if (oaRes.ok) {
+          const oaData: any = await oaRes.json();
+          translatedJsonText = oaData.choices?.[0]?.message?.content || "";
+          activeProviderUsed = "chatgpt";
+          activeModelUsed = oaModel;
+        }
+      }
+
+      // 3. Use Gemini AI (primary or unified cloud bridge for OpenRouter / ChatGPT)
+      if (!translatedJsonText) {
+        const client = getGeminiClient();
+        if (!client) {
+          return res.status(503).json({
+            error: "AI translation service requires a configured API key in Settings > Secrets.",
+          });
+        }
+
+        const providerContextNote =
+          provider === "openrouter"
+            ? "Act as an OpenRouter multi-model translation gateway."
+            : provider === "chatgpt"
+            ? "Act as a ChatGPT hospitality localization engine."
+            : "Act as Gemini AI hospitality localization engine.";
+
+        const response = await client.models.generateContent({
+          model: "gemini-4-hydrogen",
+          contents: userPrompt,
+          config: {
+            systemInstruction: `${providerContextNote}\n${systemPrompt}`,
+            responseMimeType: "application/json",
+          },
+        });
+
+        translatedJsonText = response.text || "";
+        activeProviderUsed = provider;
+        activeModelUsed =
+          provider === "openrouter"
+            ? model || "openrouter/auto"
+            : provider === "chatgpt"
+            ? model || "gpt-4o-mini"
+            : "gemini-4-hydrogen";
+      }
+
+      // Clean any accidental markdown fences and parse JSON
+      const cleanJson = translatedJsonText
+        .replace(/^```json\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/\s*```$/, "")
+        .trim();
+
+      const translatedDictionary = JSON.parse(cleanJson);
+
+      return res.json({
+        success: true,
+        targetLangCode,
+        targetLangName: langLabel,
+        provider: activeProviderUsed,
+        model: activeModelUsed,
+        translations: translatedDictionary,
+      });
+    } catch (err: any) {
+      console.error("AI language translation error:", err);
+      return res.status(500).json({
+        error: err?.message || "Failed to translate language dictionary via AI.",
       });
     }
   });
@@ -385,3 +535,4 @@ Return ONLY a valid JSON object strictly adhering to this structure:
 }
 
 startServer();
+

@@ -2,10 +2,15 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Globe, Check, MessageSquare, Sparkles, Send, Copy, ShieldCheck, ArrowRight, 
   ChevronDown, Plus, Upload, Download, Trash2, Edit3, RotateCcw, Search, X, 
-  CheckCircle2, AlertCircle, FileText
+  CheckCircle2, AlertCircle, FileText, Loader2, RefreshCw
 } from 'lucide-react';
 import { HostelSettings, SupportedLanguage } from '../../types';
-import { useLanguage } from '../../context/LanguageContext';
+import { 
+  useLanguage, 
+  AI_TRANSLATION_PROVIDERS, 
+  AI_GLOBAL_LANGUAGE_PRESETS, 
+  AIProviderType 
+} from '../../context/LanguageContext';
 import { LanguageOption, Translations } from '../../i18n/translations';
 import { 
   formatBookingConfirmationMessage, 
@@ -35,8 +40,18 @@ export const AdminLanguageSettingsCard: React.FC<AdminLanguageSettingsCardProps>
     deleteLanguage, 
     updateTranslations, 
     importTranslations, 
-    resetTranslations 
+    resetTranslations,
+    aiProvider,
+    setAiProvider,
+    autoTranslateOnSwitch,
+    setAutoTranslateOnSwitch,
+    isTranslating,
+    translationStatus,
+    lastTranslatedBy,
+    switchLanguageByAI
   } = useLanguage();
+
+  const [customAiLanguageInput, setCustomAiLanguageInput] = useState('');
 
   const [selectedPreviewTab, setSelectedPreviewTab] = useState<'confirmation' | 'reminder' | 'checkin' | 'deposit'>('confirmation');
   const [copied, setCopied] = useState(false);
@@ -147,10 +162,42 @@ export const AdminLanguageSettingsCard: React.FC<AdminLanguageSettingsCardProps>
 
   const currentLang = (settings.defaultLanguage || language || 'en') as SupportedLanguage;
 
-  const handleSelectLanguage = (newLang: SupportedLanguage) => {
+  const handleSelectLanguage = async (newLang: SupportedLanguage) => {
     setLanguage(newLang);
     onUpdateLanguage(newLang);
+    if (autoTranslateOnSwitch && newLang !== 'en') {
+      const targetObj = languages.find((l) => l.code === newLang);
+      await switchLanguageByAI(newLang, {
+        provider: aiProvider,
+        name: targetObj?.name || newLang,
+        nativeName: targetObj?.nativeName || newLang,
+        flag: targetObj?.flag || '🌐',
+        isRTL: targetObj?.isRTL || false,
+        forceRetranslate: false,
+      });
+    }
     showToast(t.settings?.saveLanguageSuccess || 'System language updated successfully!');
+  };
+
+  const handleCustomAiLanguageSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const raw = customAiLanguageInput.trim();
+    if (!raw || isTranslating) return;
+    const presetMatch = AI_GLOBAL_LANGUAGE_PRESETS.find(
+      (p) => p.name.toLowerCase() === raw.toLowerCase() || p.nativeName.toLowerCase() === raw.toLowerCase() || p.code.toLowerCase() === raw.toLowerCase()
+    );
+    const code = presetMatch ? presetMatch.code : raw.toLowerCase().replace(/[^a-z]/g, '').slice(0, 6) || 'custom';
+    await switchLanguageByAI(code, {
+      provider: aiProvider,
+      name: presetMatch ? presetMatch.name : raw,
+      nativeName: presetMatch ? presetMatch.nativeName : raw,
+      flag: presetMatch ? presetMatch.flag : '🌐',
+      isRTL: presetMatch?.isRTL || false,
+      forceRetranslate: true,
+    });
+    onUpdateLanguage(code);
+    setCustomAiLanguageInput('');
+    showToast(`Translated entire app into ${presetMatch ? presetMatch.name : raw} via ${aiProvider.toUpperCase()}!`);
   };
 
   // Sample Add-ons for WhatsApp preview
@@ -441,6 +488,167 @@ export const AdminLanguageSettingsCard: React.FC<AdminLanguageSettingsCardProps>
       {/* TAB 1: ACTIVE SELECTOR & WHATSAPP PREVIEW */}
       {activeTab === 'selector' && (
         <div className="space-y-6">
+          {/* AI Automatic Language Switcher Panel */}
+          <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 text-white p-4 sm:p-5 border border-teal-500/30 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-teal-300 shrink-0">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="text-sm font-extrabold text-white">
+                      Switch Language by AI (Automatic Translation)
+                    </h4>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-400/30">
+                      Gemini • OpenRouter • ChatGPT
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    Automatically translate all booking steps, buttons, and WhatsApp guest alerts into any language.
+                  </p>
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 text-xs font-bold text-teal-200 cursor-pointer select-none bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 self-start sm:self-auto">
+                <input
+                  type="checkbox"
+                  checked={autoTranslateOnSwitch}
+                  onChange={(e) => setAutoTranslateOnSwitch(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded accent-teal-500"
+                />
+                <span>Auto-translate on switch</span>
+              </label>
+            </div>
+
+            {/* AI Engine Selector Pills */}
+            <div className="grid grid-cols-3 gap-2">
+              {AI_TRANSLATION_PROVIDERS.map((p) => {
+                const isSelected = aiProvider === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setAiProvider(p.id as AIProviderType)}
+                    className={`px-3 py-2 rounded-xl text-left transition-all border flex flex-col justify-between ${
+                      isSelected
+                        ? 'bg-teal-500 text-slate-950 border-teal-300 font-extrabold shadow-xs'
+                        : 'bg-white/5 hover:bg-white/10 text-slate-200 border-white/10 font-semibold'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs">{p.shortName}</span>
+                      <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold ${
+                        isSelected ? 'bg-slate-950/20 text-slate-950' : 'bg-white/10 text-teal-300'
+                      }`}>
+                        {p.modelLabel}
+                      </span>
+                    </div>
+                    <span className={`text-[10px] mt-0.5 truncate ${isSelected ? 'text-slate-900' : 'text-slate-400'}`}>
+                      {p.description}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Custom Language Input + Re-translate Active Language Button */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <form onSubmit={handleCustomAiLanguageSubmit} className="flex-1 flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={customAiLanguageInput}
+                  onChange={(e) => setCustomAiLanguageInput(e.target.value)}
+                  placeholder="Type any language to translate via AI (e.g. Portuguese, Japanese, Hindi)..."
+                  disabled={isTranslating}
+                  className="flex-1 px-3.5 py-2 rounded-xl bg-white/10 border border-white/15 text-xs text-white placeholder:text-slate-400 focus:outline-none focus:border-teal-400"
+                />
+                <button
+                  type="submit"
+                  disabled={!customAiLanguageInput.trim() || isTranslating}
+                  className="px-3.5 py-2 rounded-xl bg-teal-500 hover:bg-teal-400 disabled:opacity-40 text-slate-950 font-extrabold text-xs transition-all shrink-0 flex items-center gap-1.5 cursor-pointer"
+                >
+                  {isTranslating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  <span>AI Translate</span>
+                </button>
+              </form>
+
+              <button
+                type="button"
+                disabled={isTranslating}
+                onClick={async () => {
+                  const activeObj = languages.find((l) => l.code === currentLang);
+                  await switchLanguageByAI(currentLang, {
+                    provider: aiProvider,
+                    name: activeObj?.name || currentLang,
+                    nativeName: activeObj?.nativeName || currentLang,
+                    flag: activeObj?.flag || '🌐',
+                    isRTL: activeObj?.isRTL || false,
+                    forceRetranslate: true,
+                  });
+                  showToast(`Re-translated ${activeObj?.name || currentLang} via ${aiProvider.toUpperCase()}!`);
+                }}
+                className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-teal-200 border border-white/15 text-xs font-bold flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                title="Force AI re-translation of current active language"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isTranslating ? 'animate-spin' : ''}`} />
+                <span>Refresh Active ({currentLang.toUpperCase()})</span>
+              </button>
+            </div>
+
+            {/* 1-Click Global Language Presets */}
+            <div className="pt-2 border-t border-white/10">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                  1-Click AI Language Switcher Presets
+                </span>
+                {(isTranslating || translationStatus) && (
+                  <span className="text-[11px] font-bold text-teal-300 flex items-center gap-1.5">
+                    {isTranslating && <Loader2 className="w-3 h-3 animate-spin" />}
+                    <span>{translationStatus || 'Translating...'}</span>
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {AI_GLOBAL_LANGUAGE_PRESETS.map((preset) => {
+                  const isCurrent = currentLang === preset.code;
+                  return (
+                    <button
+                      key={preset.code}
+                      type="button"
+                      disabled={isTranslating}
+                      onClick={async () => {
+                        await switchLanguageByAI(preset.code, {
+                          provider: aiProvider,
+                          name: preset.name,
+                          nativeName: preset.nativeName,
+                          flag: preset.flag,
+                          isRTL: preset.isRTL,
+                          forceRetranslate: false,
+                        });
+                        onUpdateLanguage(preset.code);
+                        showToast(`Switched to ${preset.name} via ${aiProvider.toUpperCase()} AI!`);
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 border cursor-pointer ${
+                        isCurrent
+                          ? 'bg-teal-400 text-slate-950 border-teal-300'
+                          : 'bg-white/5 hover:bg-white/15 text-slate-200 border-white/10'
+                      }`}
+                    >
+                      <span>{preset.flag}</span>
+                      <span>{preset.nativeName}</span>
+                      {lastTranslatedBy[preset.code] && (
+                        <span className="text-[9px] uppercase px-1 rounded bg-black/20">
+                          {lastTranslatedBy[preset.code].provider}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
           {/* Language Selector Dropdown */}
           <div className="space-y-3 relative" ref={dropdownRef}>
             <div className="flex items-center justify-between">

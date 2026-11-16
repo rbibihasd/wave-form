@@ -8,7 +8,6 @@ import {
   Booking, HostelSettings, NotificationTemplate, Room, SurfAddOn, 
   WaitlistEntry, AdminTab, StaffUser, StaffRole, RolePermissionsMap 
 } from '../../types';
-import { LiveOceanSpot } from '../../types/weather';
 import { getStayUrgencyBadge } from '../../utils/date';
 import { createWhatsAppUrl } from '../../utils/whatsapp';
 import { checkAndTriggerAutoResponder } from '../../utils/autoResponders';
@@ -54,8 +53,6 @@ interface AdminDashboardProps {
   staffUsers?: StaffUser[];
   currentStaff?: StaffUser;
   rolePermissions?: Record<StaffRole, RolePermissionsMap>;
-  selectedOceanSpot?: LiveOceanSpot;
-  onSelectOceanSpot?: (spot: LiveOceanSpot) => void;
   onLogout?: () => void;
   onGoToBooking?: () => void;
 
@@ -76,7 +73,6 @@ interface AdminDashboardProps {
   onUpdateWaitlistEntry?: (entry: WaitlistEntry) => void;
   onDeleteWaitlistEntry?: (entryId: string) => void;
   onConvertWaitlistToBooking?: (entry: WaitlistEntry, newBooking: Booking) => void;
-  onGoToWeather?: () => void;
   onSwitchStaffUser?: (user: StaffUser) => void;
   onUpdateRolePermissions?: (matrix: Record<StaffRole, RolePermissionsMap>) => void;
   onAddStaffUser?: (user: StaffUser) => void;
@@ -94,7 +90,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   initialTab,
   onTabChange,
   initialSettingsSection,
-  onGoToWeather,
   onUpdateBooking,
   onBatchUpdateBookings,
   onDeleteBooking,
@@ -115,8 +110,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   staffUsers,
   currentStaff,
   rolePermissions,
-  selectedOceanSpot,
-  onSelectOceanSpot,
   onLogout,
   onGoToBooking,
   onSwitchStaffUser,
@@ -483,20 +476,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <Sliders className="w-4 h-4 text-teal-500" />
             <span>Theme UI</span>
           </button>
-
-          {onGoToWeather && (
-            <button
-              type="button"
-              id="admin-live-weather-quick-btn"
-              onClick={onGoToWeather}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border shrink-0 bg-white hover:bg-teal-50 text-teal-800 border-teal-300 shadow-xs"
-              title="Open Live Ocean Weather & Waves by Sport"
-            >
-              <Waves className="w-4 h-4 text-teal-600" />
-              <span>Waves & Weather</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            </button>
-          )}
 
           <button
             type="button"
@@ -1092,7 +1071,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             onUpdateTemplate={onUpdateTemplate}
             onBatchUpdateBookings={handleDashboardBatchUpdateBookings}
             onUpdateBooking={handleDashboardUpdateBooking}
-            onSelectOceanSpot={onSelectOceanSpot}
           />
         )}
 
@@ -1181,7 +1159,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <AdminFormCountryCityCard
               settings={settings}
               onSaveSettings={onSaveSettings}
-              onSelectOceanSpot={onSelectOceanSpot}
               isModal={true}
               onClose={() => setIsLocationModalOpen(false)}
             />

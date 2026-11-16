@@ -6,6 +6,7 @@ import {
 import { Booking, HostelSettings, Room } from '../../types';
 import { canAccommodateGuests } from '../../utils/availability';
 import { formatDisplayDate } from '../../utils/date';
+import { useLanguage } from '../../context/LanguageContext';
 
 export type RoomTypeFilter = 'all' | 'dorm' | 'private' | 'suite';
 export type CapacityFilter = 'all' | '1-2' | '3-4' | '5+';
@@ -39,6 +40,7 @@ export const StepRooms: React.FC<StepRoomsProps> = ({
   onBack,
   onOpenScanner,
 }) => {
+  const { t } = useLanguage();
   const [filterType, setFilterType] = useState<RoomTypeFilter>('all');
   const [filterCapacity, setFilterCapacity] = useState<CapacityFilter>('all');
 
@@ -137,10 +139,10 @@ export const StepRooms: React.FC<StepRoomsProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl sm:text-2xl font-heading font-extrabold text-slate-900">
-            Choose Your Surf House Stay
+            {t.booking.roomsTitle}
           </h2>
           <p className="text-xs sm:text-sm text-slate-500">
-            Real-time bed availability verified for {nights} night{nights > 1 ? 's' : ''} ({guestsCount} guest{guestsCount > 1 ? 's' : ''}).
+            {t.booking.roomsSubtitle} ({nights} {nights > 1 ? t.common.nights : t.common.night}, {guestsCount} {guestsCount > 1 ? t.common.guests : t.common.guest})
           </p>
         </div>
 
@@ -587,7 +589,7 @@ export const StepRooms: React.FC<StepRoomsProps> = ({
           className="w-full sm:w-auto min-h-[48px] h-12 px-5 py-3 rounded-xl border border-slate-200 sm:border-transparent text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors order-2 sm:order-1 touch-manipulation"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Change Dates / Guests</span>
+          <span>{t.common.back}</span>
         </button>
 
         <button
@@ -597,7 +599,7 @@ export const StepRooms: React.FC<StepRoomsProps> = ({
           onClick={onNext}
           className="w-full sm:w-auto min-h-[48px] h-12 px-7 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-40 disabled:pointer-events-none text-white font-bold text-sm shadow-md shadow-teal-600/20 transition-all flex items-center justify-center gap-2 order-1 sm:order-2 touch-manipulation active:scale-[0.99]"
         >
-          <span>Continue to Surf Add-ons</span>
+          <span>{t.booking.continueToAddons}</span>
           <span className="text-base font-bold">→</span>
         </button>
       </div>

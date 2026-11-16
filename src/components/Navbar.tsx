@@ -1,19 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Waves, CalendarCheck, Shield, MessageCircle, Sparkles, 
-  Settings, QrCode, Users, Globe, ChevronDown, Check, Lock, LogOut,
-  Menu, X
+  QrCode, Globe, ChevronDown, Check, Lock,
+  Menu, X, RefreshCw, Bot, Plus
 } from 'lucide-react';
 import { HostelSettings, StaffUser } from '../types';
 import { createWhatsAppUrl } from '../utils/whatsapp';
-import { useLanguage } from '../context/LanguageContext';
-import { SUPPORTED_LANGUAGES } from '../i18n/translations';
+import { 
+  useLanguage, 
+  AI_TRANSLATION_PROVIDERS, 
+  AI_GLOBAL_LANGUAGE_PRESETS,
+  AIProviderType 
+} from '../context/LanguageContext';
 import { AdminProfileMenu } from './admin/AdminProfileMenu';
 
 interface NavbarProps {
-  currentView: 'booking' | 'weather' | 'admin' | 'admin-login';
+  currentView: 'booking' | 'admin' | 'admin-login';
   adminTab?: string;
-  onViewChange: (view: 'booking' | 'weather' | 'admin' | 'admin-login', adminTab?: string) => void;
+  onViewChange: (view: 'booking' | 'admin' | 'admin-login', adminTab?: string) => void;
   settings: HostelSettings;
   upcomingCount: number;
   onOpenLookup?: () => void;
@@ -37,10 +41,25 @@ export const Navbar: React.FC<NavbarProps> = ({
   staffUsers = [],
   onSwitchStaff,
 }) => {
-  const { language, setLanguage, t, languages: languagesList } = useLanguage();
+  const { 
+    language, 
+    setLanguage, 
+    t, 
+    languages: languagesList,
+    aiProvider,
+    setAiProvider,
+    autoTranslateOnSwitch,
+    setAutoTranslateOnSwitch,
+    isTranslating,
+    translationStatus,
+    lastTranslatedBy,
+    switchLanguageByAI,
+  } = useLanguage();
+
   const [logoError, setLogoError] = useState(false);
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [customAiLangInput, setCustomAiLangInput] = useState('');
   const langDropdownRef = useRef<HTMLDivElement>(null);
   const brandColor = settings.primaryBrandColor || '#0d9488';
 
@@ -65,6 +84,47 @@ export const Navbar: React.FC<NavbarProps> = ({
     `Aloha! I have a question about staying at ${settings.name}. 🏄`
   );
 
+  // Merge configured languages and global AI presets without duplicates
+  const availablePresets = AI_GLOBAL_LANGUAGE_PRESETS.filter(
+    preset => !languagesList.some(l => l.code === preset.code)
+  );
+
+  const activeProviderInfo = AI_TRANSLATION_PROVIDERS.find(p => p.id === aiProvider) || AI_TRANSLATION_PROVIDERS[0];
+
+  const handleLanguageSelect = async (
+    code: string,
+    meta?: { name?: string; nativeName?: string; flag?: string; isRTL?: boolean },
+    forceAI = false
+  ) => {
+    if (autoTranslateOnSwitch || forceAI || !languagesList.some(l => l.code === code)) {
+      await switchLanguageByAI(code, {
+        ...meta,
+        provider: aiProvider,
+        forceRetranslate: forceAI,
+      });
+    } else {
+      setLanguage(code);
+    }
+    setIsLangDropdownOpen(false);
+  };
+
+  const handleCustomLanguageTranslate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = customAiLangInput.trim();
+    if (!trimmed) return;
+    // Derive a 2-4 letter code from input name
+    const cleanCode = trimmed.toLowerCase().replace(/[^a-z]/g, '').slice(0, 3) || 'custom';
+    setCustomAiLangInput('');
+    await switchLanguageByAI(cleanCode, {
+      name: trimmed,
+      nativeName: trimmed,
+      flag: '🌐',
+      provider: aiProvider,
+      forceRetranslate: true,
+    });
+    setIsLangDropdownOpen(false);
+  };
+
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
       {/* Dynamic Brand Color Accent Top Line */}
@@ -72,6 +132,21 @@ export const Navbar: React.FC<NavbarProps> = ({
         className="h-0.5 w-full transition-colors duration-300"
         style={{ backgroundColor: brandColor }}
       />
+
+      {/* Live AI Translation Progress Banner */}
+      {(isTranslating || translationStatus) && (
+        <div className="bg-slate-900 text-white px-4 py-1.5 text-[11px] font-bold flex items-center justify-center gap-2 border-b border-slate-800 animate-in fade-in">
+          {isTranslating ? (
+            <RefreshCw className="w-3.5 h-3.5 text-teal-400 animate-spin shrink-0" />
+          ) : (
+            <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          )}
+          <span>{translationStatus || 'AI Translating interface...'}</span>
+          <span className="px-2 py-0.5 rounded-full bg-white/10 text-teal-300 text-[10px] uppercase tracking-wider">
+            {activeProviderInfo.shortName} AI
+          </span>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-2.5 sm:px-4 md:px-6 lg:px-8 h-16 sm:h-18 flex items-center justify-between gap-1.5 sm:gap-3">
         {/* Logo & Hostel Brand */}
@@ -136,7 +211,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Navigation & Controls */}
         <div className="flex items-center gap-1 sm:gap-2 md:gap-2.5 shrink-0">
-          {/* Global Language List Dropdown */}
+          {/* AI-Powered Language Switcher Dropdown */}
           <div 
             id="nav-language-selector"
             ref={langDropdownRef}
@@ -147,55 +222,185 @@ export const Navbar: React.FC<NavbarProps> = ({
               id="nav-language-dropdown-btn"
               onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
               className="bg-slate-100 hover:bg-slate-200/70 px-2 sm:px-2.5 py-1.5 rounded-xl flex items-center gap-1 sm:gap-1.5 border border-slate-200/80 transition-all text-xs font-semibold text-slate-800 shadow-2xs min-h-[38px] sm:min-h-[40px] touch-manipulation"
-              title="Switch System & Guest Communication Language"
+              title="Switch Language Automatically by AI (Gemini, OpenRouter, ChatGPT)"
               aria-haspopup="listbox"
               aria-expanded={isLangDropdownOpen}
             >
-              <Globe className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+              {isTranslating ? (
+                <RefreshCw className="w-3.5 h-3.5 text-teal-600 animate-spin shrink-0" />
+              ) : (
+                <Globe className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+              )}
               <span className="text-sm leading-none">{languagesList.find(l => l.code === language)?.flag || '🌐'}</span>
               <span className="uppercase text-[11px] font-bold hidden sm:inline">{language}</span>
+              <span className="hidden md:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-teal-600 text-white text-[9px] font-extrabold uppercase tracking-wider">
+                <Sparkles className="w-2.5 h-2.5" />
+                {activeProviderInfo.shortName}
+              </span>
               <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform duration-200 ${isLangDropdownOpen ? 'rotate-180 text-teal-600' : ''}`} />
             </button>
 
             {isLangDropdownOpen && (
-              <ul
+              <div
                 id="nav-language-dropdown-list"
-                role="listbox"
-                aria-label="Select language"
-                className="absolute right-0 mt-1.5 w-44 bg-white rounded-xl border border-slate-200 shadow-xl overflow-hidden py-1 z-50 divide-y divide-slate-100 animate-in fade-in slide-in-from-top-1 duration-150 max-h-72 overflow-y-auto"
+                className="absolute right-0 mt-1.5 w-72 sm:w-80 bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-1 duration-150"
               >
-                {languagesList.map((item) => {
-                  const isSelected = language === item.code;
-                  return (
-                    <li key={item.code} role="option" aria-selected={isSelected}>
+                {/* AI Translation Provider Bar (Gemini / OpenRouter / ChatGPT) */}
+                <div className="p-3 bg-slate-900 text-white space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Bot className="w-4 h-4 text-teal-400" />
+                      <span className="text-xs font-extrabold tracking-tight">AI Auto-Translator</span>
+                    </div>
+                    <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold text-teal-300">
+                      <input
+                        type="checkbox"
+                        checked={autoTranslateOnSwitch}
+                        onChange={(e) => setAutoTranslateOnSwitch(e.target.checked)}
+                        className="rounded text-teal-500 focus:ring-0 w-3.5 h-3.5"
+                      />
+                      <span>Auto-Translate</span>
+                    </label>
+                  </div>
+
+                  {/* Provider Pills: Gemini, OpenRouter, ChatGPT */}
+                  <div className="grid grid-cols-3 gap-1 bg-slate-800 p-1 rounded-xl">
+                    {AI_TRANSLATION_PROVIDERS.map((prov) => {
+                      const isCurrentProv = aiProvider === prov.id;
+                      return (
+                        <button
+                          key={prov.id}
+                          type="button"
+                          id={`nav-ai-provider-${prov.id}`}
+                          onClick={() => setAiProvider(prov.id as AIProviderType)}
+                          className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                            isCurrentProv
+                              ? 'bg-teal-500 text-slate-950 shadow-xs font-extrabold'
+                              : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
+                          }`}
+                        >
+                          <span>{prov.shortName}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom Any-Language Quick AI Translate Input */}
+                  <form onSubmit={handleCustomLanguageTranslate} className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={customAiLangInput}
+                      onChange={(e) => setCustomAiLangInput(e.target.value)}
+                      placeholder="Translate to any language (e.g. Italian, Japanese)..."
+                      className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-[11px] text-white placeholder:text-slate-400 focus:outline-hidden focus:border-teal-400"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!customAiLangInput.trim() || isTranslating}
+                      className="px-2.5 py-1.5 rounded-lg bg-teal-500 hover:bg-teal-400 disabled:opacity-40 text-slate-950 font-extrabold text-[11px] flex items-center gap-1 shrink-0 cursor-pointer"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Go</span>
+                    </button>
+                  </form>
+                </div>
+
+                {/* Active & Configured Languages */}
+                <div className="max-h-64 overflow-y-auto divide-y divide-slate-100">
+                  <div className="px-3 py-1.5 bg-slate-50 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                    <span>Available Languages ({languagesList.length})</span>
+                    {language !== 'en' && (
                       <button
                         type="button"
-                        id={`nav-lang-btn-${item.code}`}
-                        onClick={() => {
-                          setLanguage(item.code);
-                          setIsLangDropdownOpen(false);
-                        }}
-                        className={`w-full px-3 py-2 text-left transition-colors flex items-center justify-between text-xs ${
-                          isSelected
-                            ? 'bg-teal-50/80 text-teal-900 font-bold'
-                            : 'hover:bg-slate-50 text-slate-700 font-medium'
-                        }`}
+                        onClick={() => handleLanguageSelect(language, undefined, true)}
+                        className="text-teal-600 hover:underline flex items-center gap-1 font-bold cursor-pointer"
+                        title={`Re-translate ${language.toUpperCase()} using ${activeProviderInfo.shortName}`}
                       >
-                        <div className="flex items-center gap-2 min-w-0">
+                        <RefreshCw className="w-2.5 h-2.5" />
+                        <span>AI Refresh</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {languagesList.map((item) => {
+                    const isSelected = language === item.code;
+                    const aiMeta = lastTranslatedBy[item.code];
+                    return (
+                      <div key={item.code} className="flex items-center justify-between px-3 py-2 hover:bg-slate-50 transition-colors">
+                        <button
+                          type="button"
+                          id={`nav-lang-btn-${item.code}`}
+                          onClick={() => handleLanguageSelect(item.code)}
+                          className="flex-1 text-left flex items-center gap-2.5 min-w-0 cursor-pointer"
+                        >
                           <span className="text-base shrink-0 leading-none">{item.flag}</span>
                           <div className="min-w-0">
-                            <p className="leading-tight truncate">{item.nativeName}</p>
-                            <span className="text-[10px] text-slate-400 font-normal">({item.name})</span>
+                            <div className="flex items-center gap-1.5">
+                              <p className={`text-xs leading-tight truncate ${isSelected ? 'font-extrabold text-teal-900' : 'font-semibold text-slate-800'}`}>
+                                {item.nativeName}
+                              </p>
+                              <span className="text-[10px] text-slate-400 font-normal">({item.name})</span>
+                            </div>
+                            {aiMeta && (
+                              <span className="text-[9px] text-teal-600 font-bold">
+                                AI Translated via {aiMeta.provider.toUpperCase()}
+                              </span>
+                            )}
                           </div>
+                        </button>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {item.code !== 'en' && (
+                            <button
+                              type="button"
+                              onClick={() => handleLanguageSelect(item.code, item, true)}
+                              className="px-2 py-1 rounded-md bg-teal-50 hover:bg-teal-100 text-teal-700 text-[10px] font-bold border border-teal-200/80 flex items-center gap-1 cursor-pointer"
+                              title={`Auto-translate ${item.name} via ${activeProviderInfo.shortName}`}
+                            >
+                              <Sparkles className="w-2.5 h-2.5" />
+                              <span>AI</span>
+                            </button>
+                          )}
+                          {isSelected && (
+                            <Check className="w-3.5 h-3.5 text-teal-600 stroke-[3] shrink-0" />
+                          )}
                         </div>
-                        {isSelected && (
-                          <Check className="w-3.5 h-3.5 text-teal-600 stroke-[3] shrink-0 ml-1.5" />
-                        )}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+                      </div>
+                    );
+                  })}
+
+                  {/* Global Instant AI Languages */}
+                  {availablePresets.length > 0 && (
+                    <>
+                      <div className="px-3 py-1.5 bg-slate-50 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-teal-600" />
+                        <span>1-Click AI Translate ({activeProviderInfo.shortName})</span>
+                      </div>
+                      {availablePresets.map((preset) => (
+                        <button
+                          key={preset.code}
+                          type="button"
+                          id={`nav-ai-preset-${preset.code}`}
+                          onClick={() => handleLanguageSelect(preset.code, preset, true)}
+                          className="w-full px-3 py-2 text-left hover:bg-teal-50/50 transition-colors flex items-center justify-between text-xs cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-base shrink-0 leading-none">{preset.flag}</span>
+                            <div className="min-w-0">
+                              <p className="leading-tight truncate font-semibold text-slate-700">{preset.nativeName}</p>
+                              <span className="text-[10px] text-slate-400">({preset.name})</span>
+                            </div>
+                          </div>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200 text-[10px] font-bold shrink-0">
+                            <Plus className="w-2.5 h-2.5" />
+                            <span>AI Translate</span>
+                          </span>
+                        </button>
+                      ))}
+                    </>
+                  )}
+                </div>
+              </div>
             )}
           </div>
 
@@ -245,40 +450,19 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             </div>
           ) : (
-            /* GUEST VIEW CONTROLS (BOOKING / WEATHER) */
+            /* GUEST VIEW CONTROLS (BOOKING) */
             <>
               <div className="bg-slate-100 p-0.5 sm:p-1 rounded-xl flex items-center border border-slate-200/80 shrink-0">
                 <button
                   id="nav-tab-booking"
                   onClick={() => onViewChange('booking')}
-                  className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 min-h-[36px] sm:min-h-[38px] touch-manipulation ${
-                    currentView === 'booking'
-                      ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60 font-bold'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-                  }`}
+                  className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-xs border border-slate-200/60 transition-all duration-150 min-h-[36px] sm:min-h-[38px] touch-manipulation"
                 >
                   <CalendarCheck 
                     className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors duration-200 shrink-0" 
-                    style={currentView === 'booking' ? { color: brandColor } : undefined} 
+                    style={{ color: brandColor }} 
                   />
                   <span className="hidden xs:inline">{t.nav.bookStay}</span>
-                </button>
-
-                <button
-                  id="nav-tab-weather"
-                  onClick={() => onViewChange('weather')}
-                  className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 relative min-h-[36px] sm:min-h-[38px] touch-manipulation ${
-                    currentView === 'weather'
-                      ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60 font-bold'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-                  }`}
-                >
-                  <Waves 
-                    className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors duration-200 shrink-0" 
-                    style={currentView === 'weather' ? { color: brandColor } : undefined} 
-                  />
-                  <span className="hidden xs:inline">{t.nav.liveWeather}</span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse hidden sm:inline-block" />
                 </button>
               </div>
 
@@ -477,3 +661,4 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
+

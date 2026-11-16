@@ -22,25 +22,15 @@ import { createWhatsAppUrl } from './utils/whatsapp';
 import { BookingInvoiceModal } from './components/invoice/BookingInvoiceModal';
 import { ReservationLookupModal } from './components/invoice/ReservationLookupModal';
 import { applyThemeStyles } from './utils/theme';
-import { LiveOceanWeatherView } from './components/weather/LiveOceanWeatherView';
-import { INITIAL_OCEAN_SPOTS } from './data/oceanSpotsData';
-import { enrichSpotWithForecasts } from './utils/oceanWeatherApi';
-import { LiveOceanSpot } from './types/weather';
 import { LanguageProvider } from './context/LanguageContext';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<'booking' | 'weather' | 'admin' | 'admin-login'>('booking');
+  const [currentView, setCurrentView] = useState<'booking' | 'admin' | 'admin-login'>('booking');
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => getStoredAdminAuth());
   const [adminTab, setAdminTab] = useState<AdminTab>('bookings');
   const [isLookupModalOpen, setIsLookupModalOpen] = useState(false);
   const [lookupStartWithScanner, setLookupStartWithScanner] = useState(false);
   const [activeInvoiceBooking, setActiveInvoiceBooking] = useState<Booking | null>(null);
-
-  // Synchronized selected ocean spot across the app
-  const [selectedOceanSpot, setSelectedOceanSpot] = useState<LiveOceanSpot>(() => {
-    const initial = INITIAL_OCEAN_SPOTS[0];
-    return enrichSpotWithForecasts({ ...initial, isWorldSpot: false });
-  });
 
   const handleOpenScanner = () => {
     setLookupStartWithScanner(true);
@@ -52,7 +42,7 @@ export default function App() {
     setIsLookupModalOpen(true);
   };
 
-  const handleViewChange = (view: 'booking' | 'weather' | 'admin' | 'admin-login', tab?: string) => {
+  const handleViewChange = (view: 'booking' | 'admin' | 'admin-login', tab?: string) => {
     if (view === 'admin' && !isAdminAuthenticated) {
       setCurrentView('admin-login');
       if (tab) {
@@ -336,22 +326,9 @@ export default function App() {
             addOns={addOns}
             bookings={bookings}
             settings={settings}
-            selectedOceanSpot={selectedOceanSpot}
-            onSelectOceanSpot={setSelectedOceanSpot}
             onSaveBooking={handleSaveNewBooking}
             onGoToAdmin={() => handleViewChange('admin')}
-            onOpenWeatherView={() => handleViewChange('weather')}
             onOpenScanner={handleOpenScanner}
-          />
-        ) : currentView === 'weather' ? (
-          <LiveOceanWeatherView
-            initialSpot={selectedOceanSpot}
-            onSelectSpot={setSelectedOceanSpot}
-            onBackToBooking={() => handleViewChange('booking')}
-            onBookForSpot={(spot) => {
-              setSelectedOceanSpot(spot);
-              handleViewChange('booking');
-            }}
           />
         ) : currentView === 'admin-login' || (!isAdminAuthenticated && currentView === 'admin') ? (
           <AdminLoginView
@@ -370,7 +347,6 @@ export default function App() {
             waitlist={waitlist}
             initialTab={adminTab}
             onTabChange={setAdminTab}
-            onGoToWeather={() => handleViewChange('weather')}
             onLogout={handleAdminLogout}
             onGoToBooking={() => handleViewChange('booking')}
             onUpdateBooking={handleUpdateBooking}
@@ -393,8 +369,6 @@ export default function App() {
             staffUsers={staffUsers}
             currentStaff={currentStaff}
             rolePermissions={rolePermissions}
-            selectedOceanSpot={selectedOceanSpot}
-            onSelectOceanSpot={setSelectedOceanSpot}
             onSwitchStaffUser={handleSwitchStaff}
             onUpdateRolePermissions={handleUpdateRolePermissions}
             onAddStaffUser={handleAddStaffUser}

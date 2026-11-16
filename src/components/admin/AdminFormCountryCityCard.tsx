@@ -1,25 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
-  Globe, MapPin, CheckCircle2, Waves, ArrowRight, 
-  Sparkles, Sliders, RefreshCw, Compass, Building2 
+  Globe, MapPin, CheckCircle2, Sparkles 
 } from 'lucide-react';
 import { HostelSettings } from '../../types';
-import { LiveOceanSpot } from '../../types/weather';
 import { 
   WORLD_COUNTRIES_AND_CITIES, 
-  findCountryConfig, 
-  findCityConfig, 
-  FormCountryConfig, 
-  FormCityConfig 
+  findCountryConfig 
 } from '../../data/countryCityData';
-import { INITIAL_OCEAN_SPOTS } from '../../data/oceanSpotsData';
-import { INITIAL_WORLD_OCEAN_SPOTS } from '../../data/worldOceanSpotsData';
-import { enrichSpotWithForecasts } from '../../utils/oceanWeatherApi';
 
 interface AdminFormCountryCityCardProps {
   settings: HostelSettings;
   onSaveSettings: (settings: HostelSettings) => void;
-  onSelectOceanSpot?: (spot: LiveOceanSpot) => void;
   className?: string;
   isModal?: boolean;
   onClose?: () => void;
@@ -28,9 +19,7 @@ interface AdminFormCountryCityCardProps {
 export const AdminFormCountryCityCard: React.FC<AdminFormCountryCityCardProps> = ({
   settings,
   onSaveSettings,
-  onSelectOceanSpot,
   className = '',
-  isModal = false,
   onClose,
 }) => {
   const [selectedCountryName, setSelectedCountryName] = useState(settings.country || 'Portugal');
@@ -42,7 +31,6 @@ export const AdminFormCountryCityCard: React.FC<AdminFormCountryCityCardProps> =
   // Toggles for auto-filling associated metadata
   const [syncAddress, setSyncAddress] = useState(true);
   const [syncCurrencyAndTimezone, setSyncCurrencyAndTimezone] = useState(true);
-  const [syncOceanSpot, setSyncOceanSpot] = useState(true);
 
   const [savedSuccessMessage, setSavedSuccessMessage] = useState<string | null>(null);
 
@@ -77,9 +65,6 @@ export const AdminFormCountryCityCard: React.FC<AdminFormCountryCityCardProps> =
     if (e) e.preventDefault();
 
     const finalCity = isCustomCity ? (customCityInput.trim() || 'Coastal Center') : selectedCityName;
-    const finalRegion = isCustomCity 
-      ? (customRegionInput.trim() || `${selectedCountryName} Coast`)
-      : (currentCityConfig?.region || selectedCountryName);
 
     const updatedSettings: HostelSettings = {
       ...settings,
@@ -104,30 +89,6 @@ export const AdminFormCountryCityCard: React.FC<AdminFormCountryCityCardProps> =
     // Save to settings
     onSaveSettings(updatedSettings);
 
-    // Sync ocean spot
-    if (syncOceanSpot && onSelectOceanSpot) {
-      const allAvailableSpots = [...INITIAL_OCEAN_SPOTS, ...INITIAL_WORLD_OCEAN_SPOTS];
-      // Look for a spot that matches spot name or city name
-      const targetSpotName = currentCityConfig?.defaultSpotName?.toLowerCase() || '';
-      const matched = allAvailableSpots.find((s) => {
-        const spotLower = s.name.toLowerCase();
-        const regLower = s.region.toLowerCase();
-        return (
-          (targetSpotName && spotLower.includes(targetSpotName)) ||
-          spotLower.includes(finalCity.toLowerCase()) ||
-          regLower.includes(finalCity.toLowerCase())
-        );
-      });
-
-      if (matched) {
-        onSelectOceanSpot(matched);
-      } else {
-        // Fallback to first spot enriched with city coords
-        const fallback = allAvailableSpots[0];
-        onSelectOceanSpot(fallback);
-      }
-    }
-
     setSavedSuccessMessage(`Booking form country updated to ${selectedCountryName} and city to ${finalCity}!`);
     setTimeout(() => {
       setSavedSuccessMessage(null);
@@ -149,7 +110,7 @@ export const AdminFormCountryCityCard: React.FC<AdminFormCountryCityCardProps> =
                 Booking Form Country & City Location
               </h3>
               <p className="text-xs text-slate-500">
-                Change the hostel country and select any city worldwide to update the booking form and ocean weather.
+                Change the hostel country and select any city worldwide to update the booking form and regional settings.
               </p>
             </div>
           </div>
@@ -219,7 +180,7 @@ export const AdminFormCountryCityCard: React.FC<AdminFormCountryCityCardProps> =
             >
               {countryConfig.cities.map((city) => (
                 <option key={city.name} value={city.name}>
-                  {city.name} ({city.region}) • Break: {city.defaultSpotName}
+                  {city.name} ({city.region})
                 </option>
               ))}
               <option value="__custom__">✏️ Enter custom city / town...</option>
@@ -260,7 +221,7 @@ export const AdminFormCountryCityCard: React.FC<AdminFormCountryCityCardProps> =
         </div>
       )}
 
-      {/* Selected City Preview & Linked Ocean Telemetry */}
+      {/* Selected City Preview */}
       <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           <span className="font-extrabold text-slate-900 flex items-center gap-1.5">
@@ -272,19 +233,11 @@ export const AdminFormCountryCityCard: React.FC<AdminFormCountryCityCardProps> =
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
           <div className="p-2.5 rounded-xl bg-white border border-slate-200">
             <span className="text-[10px] uppercase font-bold text-slate-400 block">Form Destination</span>
             <span className="font-black text-slate-900 text-sm">
               {isCustomCity ? (customCityInput || 'Custom City') : selectedCityName}, {selectedCountryName}
-            </span>
-          </div>
-
-          <div className="p-2.5 rounded-xl bg-white border border-slate-200">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block">Linked Ocean Break</span>
-            <span className="font-bold text-teal-700 text-xs flex items-center gap-1 mt-0.5">
-              <Waves className="w-3.5 h-3.5 shrink-0" />
-              <span>{currentCityConfig?.defaultSpotName || 'Local Coastal Buoy'}</span>
             </span>
           </div>
 
@@ -317,23 +270,13 @@ export const AdminFormCountryCityCard: React.FC<AdminFormCountryCityCardProps> =
             />
             <span>Auto-sync Timezone & Currency</span>
           </label>
-
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={syncOceanSpot}
-              onChange={(e) => setSyncOceanSpot(e.target.checked)}
-              className="rounded text-teal-600 focus:ring-teal-500"
-            />
-            <span>Set primary Live Ocean Conditions spot</span>
-          </label>
         </div>
       </div>
 
       {/* Action Buttons */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
         <p className="text-[11px] text-slate-400">
-          Clicking save immediately updates the guest booking wizard, email templates, and ocean conditions ticker.
+          Clicking save immediately updates the guest booking wizard and email/WhatsApp templates.
         </p>
 
         <div className="flex items-center gap-2 ml-auto">

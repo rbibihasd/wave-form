@@ -29,7 +29,6 @@ import { AdminFormCountryCityCard } from './AdminFormCountryCityCard';
 import { AdminLanguageSettingsCard } from './AdminLanguageSettingsCard';
 import { InvoiceTemplateBuilder } from './InvoiceTemplateBuilder';
 import { INVOICE_TEMPLATE_PRESETS, DEFAULT_INVOICE_TEMPLATE } from '../../data/initialData';
-import { LiveOceanSpot } from '../../types/weather';
 
 export type SettingsSection = 'brand' | 'theme' | 'identity' | 'language' | 'policies' | 'finance' | 'surf' | 'bookingBuilder' | 'whatsapp' | 'invoices' | 'webhook' | 'cloud' | 'system';
 
@@ -45,7 +44,6 @@ export interface SettingsManagerProps {
   onUpdateTemplate?: (template: NotificationTemplate) => void;
   onBatchUpdateBookings?: (updatedBookings: Booking[]) => void;
   onUpdateBooking?: (updatedBooking: Booking) => void;
-  onSelectOceanSpot?: (spot: LiveOceanSpot) => void;
 }
 
 export const SettingsManager: React.FC<SettingsManagerProps> = ({
@@ -60,7 +58,6 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
   onUpdateTemplate,
   onBatchUpdateBookings,
   onUpdateBooking,
-  onSelectOceanSpot,
 }) => {
   const [activeSection, setActiveSection] = useState<SettingsSection>(initialSection || 'brand');
   const [formData, setFormData] = useState<HostelSettings>({ ...settings });
@@ -1434,7 +1431,7 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
       {/* TAB 3: HOSTEL IDENTITY & STATUS */}
       {activeSection === 'identity' && (
         <div className="space-y-6">
-          {/* Admin Country & City Selector for Booking Form & Ocean Weather */}
+          {/* Admin Country & City Selector for Booking Form */}
           <AdminFormCountryCityCard
             settings={formData}
             onSaveSettings={(newSettings) => {
@@ -1442,7 +1439,6 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
               onSaveSettings(newSettings);
               showToast('Booking form country and city updated successfully!');
             }}
-            onSelectOceanSpot={onSelectOceanSpot}
           />
 
           {/* System Language & Guest WhatsApp Language Toggle */}
@@ -2002,7 +1998,7 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
             <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
               <Waves className="w-4 h-4 text-teal-600" />
               <h4 className="font-heading font-extrabold text-base text-slate-900">
-                Surf Operations, Spot Forecast & Hostel Wi-Fi
+                Surf Operations & Hostel Wi-Fi
               </h4>
             </div>
 
@@ -2137,7 +2133,6 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({
               onSaveSettings(newSettings);
               showToast('Booking form country and city location updated successfully!');
             }}
-            onSelectOceanSpot={onSelectOceanSpot}
           />
 
           <BookingFormBuilder

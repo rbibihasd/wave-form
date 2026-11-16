@@ -1,6 +1,7 @@
 import React from 'react';
 import { Waves, Sparkles, ShieldCheck, Sun, Coffee, Car, Plus, Minus, Check, ArrowLeft } from 'lucide-react';
 import { HostelSettings, SelectedAddOn, SurfAddOn } from '../../types';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface StepAddOnsProps {
   addOns: SurfAddOn[];
@@ -23,6 +24,7 @@ export const StepAddOns: React.FC<StepAddOnsProps> = ({
   onNext,
   onBack,
 }) => {
+  const { t } = useLanguage();
   const getIcon = (name: string) => {
     switch (name) {
       case 'Waves':
@@ -103,10 +105,10 @@ export const StepAddOns: React.FC<StepAddOnsProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h2 className="text-xl sm:text-2xl font-heading font-extrabold text-slate-900">
-            Surf, Gear & Camp Add-ons
+            {t.booking.addonsTitle}
           </h2>
           <p className="text-xs sm:text-sm text-slate-500">
-            Enhance your stay with certified surf coaching, unlimited board swaps, and wellness.
+            {t.booking.addonsSubtitle}
           </p>
         </div>
 
@@ -253,7 +255,7 @@ export const StepAddOns: React.FC<StepAddOnsProps> = ({
           className="w-full sm:w-auto min-h-[48px] h-12 px-5 py-3 rounded-xl border border-slate-200 sm:border-transparent text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors order-2 sm:order-1 touch-manipulation"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Rooms</span>
+          <span>{t.common.back}</span>
         </button>
 
         <button
@@ -262,7 +264,7 @@ export const StepAddOns: React.FC<StepAddOnsProps> = ({
           onClick={onNext}
           className="w-full sm:w-auto min-h-[48px] h-12 px-7 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm shadow-md shadow-teal-600/20 transition-all flex items-center justify-center gap-2 order-1 sm:order-2 touch-manipulation active:scale-[0.99]"
         >
-          <span>Continue to Guest Details</span>
+          <span>{t.booking.continueToGuest}</span>
           <span className="text-base font-bold">→</span>
         </button>
       </div>

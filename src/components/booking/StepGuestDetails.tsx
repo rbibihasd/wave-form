@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User, Phone, Mail, Globe, Clock, FileText, ShieldAlert, ArrowLeft, MessageSquare, CheckSquare, HelpCircle } from 'lucide-react';
 import { GuestInfo, BookingStepConfig } from '../../types';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface StepGuestDetailsProps {
   guest: GuestInfo;
@@ -17,6 +18,7 @@ export const StepGuestDetails: React.FC<StepGuestDetailsProps> = ({
   onBack,
   stepConfig,
 }) => {
+  const { t } = useLanguage();
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const customFields = stepConfig?.customFields || [];
@@ -61,9 +63,9 @@ export const StepGuestDetails: React.FC<StepGuestDetailsProps> = ({
     }
   };
 
-  const headerTitle = stepConfig?.title || 'Lead Guest & WhatsApp Contact';
-  const headerSubtitle = stepConfig?.subtitle || 'Used to send your direct WhatsApp booking voucher and automated upcoming stay surf alerts.';
-  const nextButtonText = stepConfig?.ctaButtonText || 'Review & Confirm Booking';
+  const headerTitle = t.booking.guestTitle || stepConfig?.title || 'Lead Guest & WhatsApp Contact';
+  const headerSubtitle = t.booking.guestSubtitle || stepConfig?.subtitle || 'Used to send your direct WhatsApp booking voucher and automated upcoming stay surf alerts.';
+  const nextButtonText = stepConfig?.ctaButtonText || t.common.confirm || 'Review & Confirm Booking';
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -99,7 +101,7 @@ export const StepGuestDetails: React.FC<StepGuestDetailsProps> = ({
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5 flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-teal-600" />
-              First Name *
+              {t.booking.firstName} *
             </label>
             <input
               id="input-first-name"
@@ -119,7 +121,7 @@ export const StepGuestDetails: React.FC<StepGuestDetailsProps> = ({
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5 flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-teal-600" />
-              Last Name *
+              {t.booking.lastName} *
             </label>
             <input
               id="input-last-name"
@@ -356,7 +358,7 @@ export const StepGuestDetails: React.FC<StepGuestDetailsProps> = ({
           className="w-full sm:w-auto min-h-[48px] h-12 px-5 py-3 rounded-xl border border-slate-200 sm:border-transparent text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors order-2 sm:order-1 touch-manipulation"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back</span>
+          <span>{t.common.back}</span>
         </button>
 
         <button
